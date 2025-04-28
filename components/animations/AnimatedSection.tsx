@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { motion, useInView, useAnimation, AnimatePresence } from 'framer-motion';
+import { motion, useInView, useAnimation, AnimatePresence, Variants } from 'framer-motion';
 
 type AnimationType = 'fade' | 'slide' | 'zoom' | 'flip' | 'bounce' | 'none';
 type AnimationDirection = 'up' | 'down' | 'left' | 'right' | 'none';
@@ -25,7 +25,7 @@ type AnimatedSectionProps = {
   className?: string;
 };
 
-const getEntranceVariants = (animation: AnimationConfig) => {
+const getEntranceVariants = (animation: AnimationConfig): { initial: any; animate: any } => {
   if (!animation.enabled || animation.type === 'none') {
     return { initial: {}, animate: {} };
   }
@@ -103,7 +103,7 @@ const getEntranceVariants = (animation: AnimationConfig) => {
   };
 };
 
-const getHoverVariants = (animation: AnimationConfig) => {
+const getHoverVariants = (animation: AnimationConfig): Variants | {} => {
   if (!animation?.enabled || animation?.type === 'none') {
     return {};
   }
@@ -144,7 +144,7 @@ const getHoverVariants = (animation: AnimationConfig) => {
   };
 };
 
-const getScrollVariants = (animation: AnimationConfig) => {
+const getScrollVariants = (animation: AnimationConfig): { initial: any; animate: any } | {} => {
   if (!animation?.enabled || animation?.type === 'none') {
     return {};
   }
@@ -265,43 +265,57 @@ const AnimatedSection: React.FC<AnimatedSectionProps> = ({
     }
   }, [controls, isInView, scrollAnimation, hasPlayed]);
 
-  // Use appropriate animation settings
-  const variants = entranceAnimation?.enabled
-    ? getEntranceVariants(entranceAnimation)
-    : scrollAnimation?.enabled
-    ? getScrollVariants(scrollAnimation)
-    : { initial: {}, animate: {} };
-
-  const transition = entranceAnimation?.enabled
-    ? getTransition(entranceAnimation)
-    : scrollAnimation?.enabled
-    ? getTransition(scrollAnimation)
-    : { duration: 0.5 };
-
-  const hoverVariants = hoverAnimation?.enabled
-    ? getHoverVariants(hoverAnimation)
-    : {};
-
-  // Combine all animation properties
-  const animationProps = {
-    ref,
-    initial: 'initial',
-    animate: controls,
-    variants,
-    transition,
-    ...hoverVariants,
-    className
+  // Determine which animation props to use
+  const determineAnimationProps = () => {
+    // If scroll animation is enabled and we're not using entrance animation or it has already played
+    if (scrollAnimation?.enabled && (hasPlayed || !entranceAnimation?.enabled)) {
+      const scrollVariants = getScrollVariants(scrollAnimation);
+      
+      if ('initial' in scrollVariants && 'animate' in scrollVariants) {
+        return {
+          initial: "initial",
+          animate: isInView ? "animate" : "initial",
+          variants: scrollVariants as Variants,
+          transition: getTransition(scrollAnimation),
+        };
+      }
+      return {};
+    }
+    
+    // Use entrance animation
+    const entranceVariants = getEntranceVariants(entranceAnimation);
+    return {
+      initial: "initial",
+      animate: controls,
+      variants: entranceVariants as Variants,
+      transition: getTransition(entranceAnimation),
+    };
   };
 
-  // Apply special bounce hover animation if specified
-  const isBounceHover = hoverAnimation?.enabled && hoverAnimation.type === 'bounce';
-  const hoverClassName = isBounceHover ? 'hover:animate-bounce' : '';
+  const animationProps = determineAnimationProps();
+  
+  // Generate hover class name for CSS animations
+  const getHoverClassName = () => {
+    if (hoverAnimation?.enabled && hoverAnimation?.type === 'bounce') {
+      return 'hover:animate-bounce';
+    }
+    return '';
+  };
+
+  const hoverClassName = getHoverClassName();
+  
+  // Get hover animation props if needed
+  const hoverProps = hoverAnimation?.enabled && hoverAnimation?.type !== 'bounce' 
+    ? { whileHover: 'hover', variants: { hover: { ...getHoverVariants(hoverAnimation).whileHover } } as Variants }
+    : {};
 
   return (
     <motion.div
       {...animationProps}
+      {...hoverProps}
       className={`${className} ${hoverClassName}`}
       data-section-id={sectionId}
+      ref={ref}
     >
       {children}
     </motion.div>

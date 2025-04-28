@@ -12,6 +12,26 @@ interface AnimatedElementProps {
   animationDelay?: number;
 }
 
+// Extended animation types for internal component use
+type ExtendedAnimationType = 'fade' | 'slide' | 'zoom' | 'flip' | 'bounce' | 'scale' | 'lift' | 'pulse' | 'none';
+type ExtendedAnimationDirection = 'up' | 'down' | 'left' | 'right' | 'in' | 'out' | 'top' | 'bottom' | 'none';
+
+// Define types for animation variants
+interface AnimationVariant {
+  x?: number;
+  y?: number;
+  opacity?: number;
+  scale?: number;
+  boxShadow?: string;
+  transition?: any;
+}
+
+interface AnimationVariants {
+  hidden: AnimationVariant;
+  visible: AnimationVariant;
+  hover: AnimationVariant;
+}
+
 export function AnimatedElement({
   sectionId,
   className,
@@ -58,8 +78,8 @@ export function AnimatedElement({
   }, [previewMode]);
   
   // Get animation values based on configuration
-  const getAnimationVariants = () => {
-    const variants = {
+  const getAnimationVariants = (): AnimationVariants => {
+    const variants: AnimationVariants = {
       hidden: {},
       visible: {},
       hover: {},
@@ -68,13 +88,13 @@ export function AnimatedElement({
     // Entrance animation
     if (animations.entrance.enabled && animations.entrance.type !== 'none') {
       // Starting position (hidden)
-      switch (animations.entrance.type) {
+      switch (animations.entrance.type as ExtendedAnimationType) {
         case 'fade':
           variants.hidden.opacity = 0;
           variants.visible.opacity = 1;
           break;
         case 'slide':
-          switch (animations.entrance.direction) {
+          switch (animations.entrance.direction as ExtendedAnimationDirection) {
             case 'left':
               variants.hidden.x = -50;
               variants.visible.x = 0;
@@ -96,7 +116,7 @@ export function AnimatedElement({
           variants.visible.opacity = 1;
           break;
         case 'zoom':
-          variants.hidden.scale = animations.entrance.direction === 'in' ? 0.8 : 1.2;
+          variants.hidden.scale = (animations.entrance.direction as ExtendedAnimationDirection) === 'in' ? 0.8 : 1.2;
           variants.visible.scale = 1;
           variants.hidden.opacity = 0;
           variants.visible.opacity = 1;
@@ -117,12 +137,12 @@ export function AnimatedElement({
     
     // Hover animation
     if (animations.hover.enabled && animations.hover.type !== 'none') {
-      switch (animations.hover.type) {
+      switch (animations.hover.type as ExtendedAnimationType) {
         case 'fade':
-          variants.hover.opacity = animations.hover.direction === 'in' ? 1 : 0.7;
+          variants.hover.opacity = (animations.hover.direction as ExtendedAnimationDirection) === 'in' ? 1 : 0.7;
           break;
         case 'scale':
-          variants.hover.scale = animations.hover.direction === 'up' ? 1.05 : 0.95;
+          variants.hover.scale = (animations.hover.direction as ExtendedAnimationDirection) === 'up' ? 1.05 : 0.95;
           break;
         case 'lift':
           variants.hover.y = -5;
@@ -161,7 +181,7 @@ export function AnimatedElement({
     const classes = [];
     
     // Add pulse animation class if needed
-    if (animations.hover.enabled && animations.hover.type === 'pulse' && isHovering) {
+    if (animations.hover.enabled && (animations.hover.type as ExtendedAnimationType) === 'pulse' && isHovering) {
       classes.push('animate-pulse');
     }
     
@@ -187,12 +207,12 @@ export function AnimatedElement({
     };
     
     // Add specific animation properties
-    switch(animations.scroll.type) {
+    switch(animations.scroll.type as ExtendedAnimationType) {
       case 'fade':
         // Already covered by default opacity settings
         break;
       case 'slide':
-        switch(animations.scroll.direction) {
+        switch(animations.scroll.direction as ExtendedAnimationDirection) {
           case 'left':
             scrollProps.initial.x = -50;
             scrollProps.animate.x = inView ? 0 : -50;
@@ -212,7 +232,7 @@ export function AnimatedElement({
         }
         break;
       case 'zoom':
-        scrollProps.initial.scale = animations.scroll.direction === 'in' ? 0.8 : 1.2;
+        scrollProps.initial.scale = (animations.scroll.direction as ExtendedAnimationDirection) === 'in' ? 0.8 : 1.2;
         scrollProps.animate.scale = inView ? 1 : scrollProps.initial.scale;
         break;
     }
