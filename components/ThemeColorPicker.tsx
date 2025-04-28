@@ -79,7 +79,7 @@ function ColorButton({ color, isSelected, onClick }: ColorButtonProps) {
         <motion.div
           layoutId="selectedColorRing"
           className="absolute inset-0 rounded-full ring-2 ring-offset-2 ring-offset-white dark:ring-offset-zinc-950"
-          style={{ ringColor: color }}
+          style={{ borderColor: color }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
