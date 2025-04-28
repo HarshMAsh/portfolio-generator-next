@@ -1,0 +1,289 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# 📘 Project Setup Instructions for Junior Developers
+> **Next.js (App Router) + MongoDB Backend Project (State-of-the-Art Stack)**
+
+---
+
+## 📋 Project Objective
+
+You are tasked to set up a fullstack web application using:
+
+- **Frontend**: Next.js (App Router)
+- **Backend**: Next.js API Routes
+- **Database**: MongoDB (with Mongoose)
+- **Libraries**: TailwindCSS, Zod, React Query, NextAuth, TypeScript, etc.
+
+✅ All code must meet production-level, scalable, and secure standards.
+
+---
+
+## 📦 1. Initial Setup
+
+### 1.1 Create a New Next.js Project
+
+```bash
+npx create-next-app@latest your-project-name --typescript
+cd your-project-name
+```
+
+---
+
+### 1.2 Install Required Libraries
+
+```bash
+npm install mongoose zod @tanstack/react-query next-auth tailwindcss postcss autoprefixer dotenv axios bcryptjs
+npm install --save-dev eslint prettier
+```
+
+---
+
+### 1.3 Setup TailwindCSS
+
+```bash
+npx tailwindcss init -p
+```
+
+Update `tailwind.config.ts` and import Tailwind in `globals.css` according to [official docs](https://tailwindcss.com/docs/guides/nextjs).
+
+---
+
+## 🏗️ 2. Project Structure
+
+Organize your codebase like this:
+
+```
+/app
+  /api
+    /users
+      route.ts
+/components
+/lib
+  mongodb.ts
+  validator.ts
+/services
+  userService.ts
+/hooks
+  useUsers.ts
+/models
+  User.ts
+/types
+  user.d.ts
+/utils
+  apiError.ts
+/public
+/styles
+  globals.css
+```
+
+✅ Keep frontend, backend, hooks, and services cleanly separated.
+
+---
+
+## 🔑 3. Environment Variables
+
+Create a `.env.local` file:
+
+```
+MONGODB_URI=mongodb+srv://<username>:<password>@cluster.mongodb.net/yourdatabase
+NEXTAUTH_SECRET=<your_random_secret>
+NEXT_PUBLIC_API_URL=http://localhost:3000
+```
+
+✅ Never hardcode credentials inside code.
+
+---
+
+## ⚙️ 4. MongoDB Connection (`/lib/mongodb.ts`)
+
+```ts
+import mongoose from 'mongoose';
+
+const MONGODB_URI = process.env.MONGODB_URI as string;
+
+if (!MONGODB_URI) {
+  throw new Error('Please define MONGODB_URI inside .env.local');
+}
+
+let cached = (global as any).mongoose;
+
+if (!cached) {
+  cached = (global as any).mongoose = { conn: null, promise: null };
+}
+
+async function dbConnect() {
+  if (cached.conn) return cached.conn;
+
+  cached.promise = mongoose.connect(MONGODB_URI, { bufferCommands: false }).then((mongoose) => mongoose);
+  cached.conn = await cached.promise;
+  return cached.conn;
+}
+
+export default dbConnect;
+```
+
+---
+
+## 📄 5. User Model (`/models/User.ts`)
+
+```ts
+import mongoose, { Schema, Document } from 'mongoose';
+
+export interface IUser extends Document {
+  name: string;
+  email: string;
+  password: string;
+}
+
+const UserSchema = new Schema<IUser>(
+  {
+    name: { type: String, required: true },
+    email: { type: String, required: true, unique: true },
+    password: { type: String, required: true },
+  },
+  { timestamps: true }
+);
+
+export default mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+```
+
+---
+
+## 🔍 6. Input Validation with Zod (`/lib/validator.ts`)
+
+```ts
+import { z } from 'zod';
+
+export const userSchema = z.object({
+  name: z.string().min(3, "Name must be at least 3 characters long"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters long"),
+});
+```
+
+✅ Always validate user input before interacting with the database.
+
+---
+
+## 🚀 7. API Routes (`/app/api/users/route.ts`)
+
+```ts
+import { NextResponse } from 'next/server';
+import dbConnect from '@/lib/mongodb';
+import User from '@/models/User';
+import { userSchema } from '@/lib/validator';
+import { ApiError } from '@/utils/apiError';
+import bcrypt from 'bcryptjs';
+
+export async function GET() {
+  try {
+    await dbConnect();
+    const users = await User.find().lean();
+    return NextResponse.json(users);
+  } catch (error) {
+    throw new ApiError(500, 'Failed to fetch users');
+  }
+}
+
+export async function POST(request: Request) {
+  try {
+    await dbConnect();
+    const body = await request.json();
+
+    const validatedData = userSchema.parse(body);
+    const hashedPassword = await bcrypt.hash(validatedData.password, 12);
+
+    const newUser = new User({
+      name: validatedData.name,
+      email: validatedData.email,
+      password: hashedPassword,
+    });
+
+    await newUser.save();
+
+    return NextResponse.json({ success: true, user: newUser }, { status: 201 });
+  } catch (error: any) {
+    if (error instanceof ApiError) {
+      return NextResponse.json({ error: error.message }, { status: error.statusCode });
+    }
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
+}
+```
+
+---
+
+## 📡 8. Frontend API Services (`/services/userService.ts`)
+
+```ts
+import axios from 'axios';
+
+export const getUsers = async () => {
+  const response = await axios.get('/api/users');
+  return response.data;
+};
+
+export const createUser = async (userData: { name: string; email: string; password: string }) => {
+  const response = await axios.post('/api/users', userData);
+  return response.data;
+};
+```
+
+---
+
+## 🔄 9. Frontend Data Hooks (`/hooks/useUsers.ts`)
+
+```ts
+import { useQuery } from '@tanstack/react-query';
+import { getUsers } from '@/services/userService';
+
+export const useUsers = () => {
+  return useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+  });
+};
+```
+
+---
+
+## 🚨 10. Error Handling Utilities (`/utils/apiError.ts`)
+
+```ts
+export class ApiError extends Error {
+  statusCode: number;
+
+  constructor(statusCode: number, message: string) {
+    super(message);
+    this.statusCode = statusCode;
+  }
+}
+```
+
+---
+
+## ✅ Final Junior Developer Checklist
+
+| Step | Task | Status |
+|:----|:----|:---|
+| 1 | Setup Next.js, TailwindCSS, and TypeScript | ⬜ |
+| 2 | Setup MongoDB Connection | ⬜ |
+| 3 | Create User model (Mongoose) | ⬜ |
+| 4 | Create and Validate API Routes | ⬜ |
+| 5 | Hash Passwords Securely (bcryptjs) | ⬜ |
+| 6 | Separate Services and Hooks | ⬜ |
+| 7 | Use React Query for Server State | ⬜ |
+| 8 | Securely manage Environment Variables | ⬜ |
+| 9 | Follow Error Handling Best Practices | ⬜ |
+| 10 | Maintain Clean and Organized Code | ⬜ |
+
+---
+
+# 📣 Final Reminder
+
+> **You are not just coding.  
+
+You are building scalable, reliable, and secure systems that people will use and trust.**
