@@ -306,7 +306,18 @@ const AnimatedSection: React.FC<AnimatedSectionProps> = ({
   
   // Get hover animation props if needed
   const hoverProps = hoverAnimation?.enabled && hoverAnimation?.type !== 'bounce' 
-    ? { whileHover: 'hover', variants: { hover: { ...getHoverVariants(hoverAnimation).whileHover } } as Variants }
+    ? (() => {
+        const hoverVariant = getHoverVariants(hoverAnimation);
+        if ('whileHover' in hoverVariant) {
+          return { 
+            whileHover: 'hover', 
+            variants: { 
+              hover: { ...hoverVariant.whileHover } 
+            } as Variants 
+          };
+        }
+        return {};
+      })()
     : {};
 
   return (
