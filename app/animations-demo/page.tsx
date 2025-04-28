@@ -21,7 +21,7 @@ const sampleSections = [
 ];
 
 export default function AnimationsDemoPage() {
-  const { resetAllAnimations, togglePreviewMode, isPreviewMode } = useAnimationsStore();
+  const { resetAllAnimations, togglePreviewMode, previewMode } = useAnimationsStore();
   const [activeSection, setActiveSection] = useState(sampleSections[0].id);
   
   return (
@@ -33,7 +33,7 @@ export default function AnimationsDemoPage() {
             <Label htmlFor="preview-mode">Preview Mode</Label>
             <Switch 
               id="preview-mode" 
-              checked={isPreviewMode} 
+              checked={previewMode} 
               onCheckedChange={togglePreviewMode} 
             />
           </div>
