@@ -19,7 +19,7 @@ export function AnimatedElement({
   id,
   animationDelay = 0, // Additional delay to stagger animations
 }: AnimatedElementProps) {
-  const { getSectionAnimations, isPreviewMode } = useAnimationsStore();
+  const { getSectionAnimations, previewMode } = useAnimationsStore();
   const [hasEntered, setHasEntered] = useState(false);
   const [isHovering, setIsHovering] = useState(false);
   const animations = getSectionAnimations(sectionId);
@@ -27,7 +27,7 @@ export function AnimatedElement({
   // For scroll animations
   const { ref: inViewRef, inView } = useInView({
     threshold: 0.2,
-    triggerOnce: !isPreviewMode, // Only trigger once unless in preview mode
+    triggerOnce: !previewMode, // Only trigger once unless in preview mode
   });
   
   // Combined ref for the element
@@ -52,10 +52,10 @@ export function AnimatedElement({
   
   // Reset when entering preview mode
   useEffect(() => {
-    if (isPreviewMode) {
+    if (previewMode) {
       setHasEntered(false);
     }
-  }, [isPreviewMode]);
+  }, [previewMode]);
   
   // Get animation values based on configuration
   const getAnimationVariants = () => {
